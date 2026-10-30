@@ -4,6 +4,7 @@ import com.claimpilot.payment.adapter.FakePaymentGateway;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -26,6 +27,7 @@ import java.util.UUID;
  * class shares this configuration, so Spring caches one context for the run. Tests make their own customers,
  * so they never see each other's data.
  */
+@AutoConfigureObservability
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(ItBase.TestBeans.class)
 public abstract class ItBase {
