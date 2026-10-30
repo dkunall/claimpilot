@@ -1,5 +1,6 @@
 package com.claimpilot.shared.web;
 
+import com.claimpilot.shared.domain.DomainRuleException;
 import com.claimpilot.shared.error.ApiException;
 import com.claimpilot.shared.error.RateLimitedException;
 import org.slf4j.Logger;
@@ -34,6 +35,12 @@ public class ProblemHandler extends ResponseEntityExceptionHandler {
         ProblemDetail body = problem(status, e.code(), e.getMessage());
         e.details().forEach(body::setProperty);
         return response.body(body);
+    }
+
+    @ExceptionHandler(DomainRuleException.class)
+    ResponseEntity<ProblemDetail> rule(DomainRuleException e) {
+        return ResponseEntity.unprocessableEntity()
+                .body(problem(HttpStatus.UNPROCESSABLE_ENTITY, e.code(), e.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

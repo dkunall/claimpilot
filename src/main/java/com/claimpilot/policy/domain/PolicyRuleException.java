@@ -1,16 +1,11 @@
 package com.claimpilot.policy.domain;
 
-/** A request that breaks a policy rule; {@code code} is reported to the client. */
-public class PolicyRuleException extends RuntimeException {
+import com.claimpilot.shared.domain.DomainRuleException;
 
-    private final String code;
+/** A request that breaks a policy rule; {@code code} is reported to the client. */
+public class PolicyRuleException extends DomainRuleException {
 
     public PolicyRuleException(String code, String message) {
-        super(message);
-        this.code = code;
-    }
-
-    public String code() {
-        return code;
+        super(code, message);
     }
 }
