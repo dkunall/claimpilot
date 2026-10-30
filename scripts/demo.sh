@@ -5,6 +5,8 @@ set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
 RUN=$(openssl rand -hex 3)
+# A fresh phone per run: reusing one across runs links the holders in the fraud graph and the claim is held.
+PHONE="+91 9$(printf '%09d' $(( $(od -An -N4 -tu4 /dev/urandom) % 1000000000 )))"
 CUST="cust-$RUN@demo.example.test"
 M=$(token "$MANAGER_SUB")
 C=$(token "$CUST")
@@ -48,9 +50,9 @@ check "what we believed before recording it" "$(expect 200 "$C" GET "/v1/policie
 check "cover today is unchanged" "$(expect 200 "$C" GET "/v1/policies/$P" | jq -r .cover.coverage.inputs.sumInsuredMinor)" 50000000
 
 echo "== claim: FNOL, presigned upload, straight-through settlement"
-F=$(expect 201 "$C" POST /v1/claims "$(jq -nc --arg p "$P" --arg at "$(now_iso)" '{policyId: $p,
+F=$(expect 201 "$C" POST /v1/claims "$(jq -nc --arg p "$P" --arg at "$(now_iso)" --arg phone "$PHONE" '{policyId: $p,
     coverageCode: "HOSPITALISATION", lossAt: $at, claimedMinor: 1200000, description: "Day-care procedure (synthetic)",
-    parties: [{type: "PHONE", value: "+91 90000 0\($p[0:4])"}], payoutToken: "tok_payout_demo",
+    parties: [{type: "PHONE", value: $phone}], payoutToken: "tok_payout_demo",
     documents: [{fileName: "bill.pdf", contentType: "application/pdf", sizeBytes: 9}]}')" -H "Idempotency-Key: fnol-$P")
 CL=$(jq -r .claim.id <<< "$F")
 DOC=$(jq -r '.uploads[0].documentId' <<< "$F")
@@ -73,9 +75,14 @@ until_eq 30 1 mails "$CUST" "was changed" > /dev/null && echo "  ok   endorsemen
 until_eq 30 1 mails "$CUST" "paid" > /dev/null && echo "  ok   claim paid mail"
 
 echo "== renewals"
-DUE=$(TZ=Asia/Kolkata date -d '+365 days' +%F)
-check "customers can't run renewals" "$(call "$C" POST "/v1/renewals/run?date=$DUE" | tail -1)" 403
-R1=$(expect 200 "$M" POST "/v1/renewals/run?date=$DUE")
+check "customers can't run renewals" "$(call "$C" POST "/v1/renewals/run?date=$(TZ=Asia/Kolkata date +%F)" | tail -1)" 403
+# The new policy falls due in 365 days. Each business date runs once, so on a reused stack move to the next
+# date that hasn't run; the policy is still due on those.
+for off in $(seq 365 420); do
+  DUE=$(TZ=Asia/Kolkata date -d "+$off days" +%F)
+  R1=$(expect 200 "$M" POST "/v1/renewals/run?date=$DUE")
+  [[ $(jq -r .replayed <<< "$R1") == false ]] && break
+done
 echo "  run for $DUE: $(jq -c '{status, renewed, paymentDue, lapsed, reminders, durationMs, replayed}' <<< "$R1")"
 R2=$(expect 200 "$M" POST "/v1/renewals/run?date=$DUE")
 check "same date again is a replay" "$(jq -r .replayed <<< "$R2")" true
