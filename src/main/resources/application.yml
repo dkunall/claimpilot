@@ -57,7 +57,7 @@ management:
     distribution:
       percentiles:
         claimpilot.policy.read: 0.5,0.95,0.99
-        claimpilot.claims.cycle: 0.5,0.95
+        claimpilot.claims.cycle_time: 0.5,0.95
 
 claimpilot:
   security:
