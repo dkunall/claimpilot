@@ -38,4 +38,11 @@ public interface PolicyRepository {
                            long premiumDeltaMinor, Instant recordedAt, String createdBy);
 
     void setStatus(UUID id, PolicyStatus status, Instant graceUntil);
+
+    /** Reads the policy row with {@code FOR UPDATE}, serialising renewals, payments and lapses on it. */
+    Optional<Policy> lock(UUID id);
+
+    /** Moves the policy into a new term (and bumps its lock version so a stale endorsement can't land). */
+    void startTerm(UUID id, int productVersion, Instant termStart, Instant termEnd, PolicyStatus status,
+                   Instant graceUntil);
 }

@@ -129,6 +129,21 @@ class JdbcPolicyRepository implements PolicyRepository {
                 .params(status.name(), ts(graceUntil), id).update();
     }
 
+    @Override
+    public Optional<Policy> lock(UUID id) {
+        return db.sql("select * from policy where id = ? for update").param(id).query(policyRow).optional();
+    }
+
+    @Override
+    public void startTerm(UUID id, int productVersion, Instant termStart, Instant termEnd, PolicyStatus status,
+                          Instant graceUntil) {
+        db.sql("""
+                update policy set product_version = ?, term_start = ?, term_end = ?, status = ?, grace_until = ?,
+                    lock_version = lock_version + 1
+                where id = ?""")
+                .params(productVersion, ts(termStart), ts(termEnd), status.name(), ts(graceUntil), id).update();
+    }
+
     private Policy policy(ResultSet rs, int i) throws SQLException {
         return new Policy(rs.getObject("id", UUID.class), rs.getString("number"), rs.getString("holder_subject"),
                 rs.getString("agent_subject"), rs.getString("holder_name"), rs.getString("holder_email"),

@@ -12,7 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Stand-in for a real gateway. Tokens starting with {@code tok_decline} are declined; everything else succeeds.
+ * Stand-in for a real gateway. Tokens starting with {@code tok_decline} are declined; {@code tok_outage} makes
+ * the call fail as if the gateway were down (nothing is remembered); everything else succeeds.
  * An approved key always returns its first answer, so a retry can't move money twice; a declined attempt does
  * not use the key up, so the customer can retry with a working card. References derive from the key.
  * {@link #calls()} counts distinct keys that actually "moved money", which tests use to catch double charges.
@@ -34,6 +35,9 @@ public class FakePaymentGateway implements PaymentGateway {
     }
 
     private Result once(String key, String prefix, String token, long amountMinor) {
+        if (token != null && token.startsWith("tok_outage")) {
+            throw new IllegalStateException("payment gateway unavailable (test token)");
+        }
         Result r = seen.computeIfAbsent(key, k -> decide(prefix, k, token, amountMinor));
         if (!r.approved()) {
             seen.remove(key, r);
