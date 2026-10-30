@@ -3,6 +3,7 @@ package com.claimpilot.quote.application;
 import com.claimpilot.quote.domain.TokenBucket;
 import com.claimpilot.shared.config.ClaimPilotProperties;
 import com.claimpilot.shared.error.RateLimitedException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,6 +20,7 @@ public class QuoteRateLimiter {
     private final ClaimPilotProperties.Quotes cfg;
     private final LongSupplier nanos;
 
+    @Autowired
     public QuoteRateLimiter(ClaimPilotProperties props) {
         this(props.quotes(), System::nanoTime);
     }

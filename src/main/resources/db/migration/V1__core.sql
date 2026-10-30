@@ -70,7 +70,7 @@ create table policy (
     term_start        timestamptz not null,
     term_end          timestamptz not null,
     grace_until       timestamptz,
-    autopay_token     text not null,
+    autopay_token     text,                          -- null: the holder pays renewals by hand
     lock_version      bigint not null default 0,
     created_at        timestamptz not null,
     foreign key (product_id, product_version) references product_version (product_id, version)
