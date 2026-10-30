@@ -1,0 +1,102 @@
+name: claimpilot
+
+# Secrets come from an env file that scripts/up.sh generates outside the repo; nothing here has a default.
+# Published ports bind to 127.0.0.1 only: 8940 API, 8941 token issuer, 8942 Mailpit inbox, 8943 object storage
+# (published because presigned upload/download links are used from the host).
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: claimpilot
+      POSTGRES_USER: claimpilot
+      POSTGRES_PASSWORD: ${CLAIMPILOT_DB_PASSWORD:?run scripts/up.sh or set CLAIMPILOT_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U claimpilot"]
+      interval: 3s
+      retries: 30
+    volumes:
+      - db:/var/lib/postgresql/data
+
+  kafka:
+    image: apache/kafka:3.8.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_HEAP_OPTS: -Xmx384m -Xms384m
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+    volumes:
+      - kafka:/var/lib/kafka/data
+
+  # RustFS, an S3-compatible object store, standing in for S3.
+  s3:
+    image: rustfs/rustfs:1.0.4
+    environment:
+      RUSTFS_ACCESS_KEY: ${CLAIMPILOT_S3_ACCESS_KEY:?set CLAIMPILOT_S3_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${CLAIMPILOT_S3_SECRET_KEY:?set CLAIMPILOT_S3_SECRET_KEY}
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 9000"]
+      interval: 3s
+      retries: 40
+    ports:
+      - "127.0.0.1:8943:9000"
+    volumes:
+      - s3:/data
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:8942:8025"
+
+  # Stand-in identity provider: any client_id becomes the token subject. Demo only.
+  oauth:
+    image: ghcr.io/navikt/mock-oauth2-server:2.1.10
+    environment:
+      SERVER_PORT: 8080
+    ports:
+      - "127.0.0.1:8941:8080"
+
+  app:
+    build: .
+    image: claimpilot:local
+    depends_on:
+      db: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+      s3: { condition: service_healthy }
+      mailpit: { condition: service_started }
+      oauth: { condition: service_started }
+    environment:
+      CLAIMPILOT_PORT: 8940
+      CLAIMPILOT_DB_URL: jdbc:postgresql://db:5432/claimpilot
+      CLAIMPILOT_DB_PASSWORD: ${CLAIMPILOT_DB_PASSWORD}
+      CLAIMPILOT_KAFKA: kafka:9092
+      CLAIMPILOT_SMTP_HOST: mailpit
+      CLAIMPILOT_ISSUER: http://oauth:8080/claimpilot
+      CLAIMPILOT_S3_ENDPOINT: http://s3:9000
+      CLAIMPILOT_S3_PUBLIC_ENDPOINT: http://127.0.0.1:8943
+      CLAIMPILOT_S3_ACCESS_KEY: ${CLAIMPILOT_S3_ACCESS_KEY}
+      CLAIMPILOT_S3_SECRET_KEY: ${CLAIMPILOT_S3_SECRET_KEY}
+      CLAIMPILOT_PARTY_HMAC_KEY: ${CLAIMPILOT_PARTY_HMAC_KEY:?set CLAIMPILOT_PARTY_HMAC_KEY}
+      CLAIMPILOT_BOOTSTRAP_MANAGERS: ${CLAIMPILOT_BOOTSTRAP_MANAGERS:-manager@demo.example.test}
+      CLAIMPILOT_QUOTES_PER_MINUTE: ${CLAIMPILOT_QUOTES_PER_MINUTE:-30}
+      CLAIMPILOT_QUOTES_BURST: ${CLAIMPILOT_QUOTES_BURST:-10}
+      JAVA_TOOL_OPTIONS: -Xmx640m -XX:+ExitOnOutOfMemoryError
+    ports:
+      - "127.0.0.1:8940:8940"
+
+volumes:
+  db:
+  kafka:
+  s3:
