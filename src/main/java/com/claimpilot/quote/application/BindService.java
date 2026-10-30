@@ -128,8 +128,6 @@ public class BindService {
             var event = new LinkedHashMap<String, Object>();
             event.put("policyId", policy.id().toString());
             event.put("number", policy.number());
-            event.put("holderEmail", policy.holderEmail());
-            event.put("holderName", policy.holderName());
             event.put("productId", policy.productId());
             event.put("termStart", start.toString());
             event.put("termEnd", policy.termEnd().toString());

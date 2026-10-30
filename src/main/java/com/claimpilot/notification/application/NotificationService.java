@@ -24,8 +24,7 @@ import java.util.UUID;
 
 /**
  * Turns policy and claim events into customer emails. Events carry ids, not contact details; the address is
- * looked up when the mail is sent, so a changed address is honoured and Kafka holds no email addresses for new
- * event types.
+ * looked up when the mail is sent, so a changed address is honoured and Kafka holds no contact details.
  *
  * <p>The dedup row and the send share a transaction: if the SMTP call fails the row rolls back and Kafka
  * redelivers. If the process dies after the send but before the commit, the mail goes out twice; that's the

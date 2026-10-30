@@ -157,8 +157,7 @@ public class ClaimService {
             claims.insertDocuments(docs);
             claims.transition(id, new Transition(null, ClaimStatus.FNOL, caller.subject(), null, now));
             outbox.append(Outbox.CLAIM_EVENTS, id.toString(), "ClaimReported", Map.of("claimId", id.toString(),
-                    "number", c.number(), "policyId", policy.id().toString(), "claimedMinor", c.claimedMinor(),
-                    "holderEmail", policy.holderEmail()));
+                    "number", c.number(), "policyId", policy.id().toString(), "claimedMinor", c.claimedMinor()));
             return c;
         });
         List<Upload> uploads = docs.stream().map(this::upload).toList();
