@@ -45,6 +45,11 @@ public class FakePaymentGateway implements PaymentGateway {
         return moved.get();
     }
 
+    /** How many distinct approved charge or payout keys start with {@code prefix}, e.g. {@code "charge:bind:"}. */
+    public long approved(String prefix) {
+        return seen.entrySet().stream().filter(e -> e.getKey().startsWith(prefix) && e.getValue().approved()).count();
+    }
+
     private Result decide(String prefix, String key, String token, long amountMinor) {
         if (amountMinor <= 0) {
             return new Result(false, prefix + ref(key), "amount must be positive");
