@@ -94,7 +94,7 @@ public abstract class ItBase {
     /** A staff member with the given role, as an API client. */
     protected Api staff(String role) {
         String sub = unique(role.toLowerCase());
-        manager.put("/v1/staff/" + sub, Map.of("role", role)).expect(200);
+        manager.put("/v1/staff/" + sub, Map.of("role", role)).expect(204);
         return as(sub);
     }
 

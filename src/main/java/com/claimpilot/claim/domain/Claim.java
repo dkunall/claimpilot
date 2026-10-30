@@ -102,6 +102,17 @@ public record Claim(
                 createdBy, decidedAt, at, lockVersion);
     }
 
+    /** A new payout destination, for retrying a declined settlement. */
+    public Claim withPayoutToken(String token) {
+        if (!status.payable()) {
+            throw new DomainConflictException("not-payable", "only an approved, unsettled claim can change payout details");
+        }
+        return new Claim(id, number, policyId, coverageCode, coverageVersionId, lossAt, reportedAt, claimedMinor,
+                reserveMinor, assessedMinor, approvedMinor, status, stpEligible, triageReasons, fraudScore,
+                fraudReasons, assessedBy, token, description, documentsRequired, createdBy, decidedAt, settledAt,
+                lockVersion);
+    }
+
     private Claim with(ClaimStatus s) {
         return new Claim(id, number, policyId, coverageCode, coverageVersionId, lossAt, reportedAt, claimedMinor,
                 reserveMinor, assessedMinor, approvedMinor, s, stpEligible, triageReasons, fraudScore, fraudReasons,
