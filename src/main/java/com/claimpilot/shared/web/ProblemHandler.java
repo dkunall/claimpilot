@@ -1,5 +1,6 @@
 package com.claimpilot.shared.web;
 
+import com.claimpilot.shared.domain.DomainConflictException;
 import com.claimpilot.shared.domain.DomainRuleException;
 import com.claimpilot.shared.error.ApiException;
 import com.claimpilot.shared.error.RateLimitedException;
@@ -39,8 +40,8 @@ public class ProblemHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(DomainRuleException.class)
     ResponseEntity<ProblemDetail> rule(DomainRuleException e) {
-        return ResponseEntity.unprocessableEntity()
-                .body(problem(HttpStatus.UNPROCESSABLE_ENTITY, e.code(), e.getMessage()));
+        HttpStatus status = e instanceof DomainConflictException ? HttpStatus.CONFLICT : HttpStatus.UNPROCESSABLE_ENTITY;
+        return ResponseEntity.status(status).body(problem(status, e.code(), e.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
