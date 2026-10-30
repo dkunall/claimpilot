@@ -1,0 +1,89 @@
+spring:
+  application:
+    name: claimpilot
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${CLAIMPILOT_DB_URL:jdbc:postgresql://localhost:5432/claimpilot}
+    username: ${CLAIMPILOT_DB_USER:claimpilot}
+    password: ${CLAIMPILOT_DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 20
+  flyway:
+    enabled: true
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: never
+  kafka:
+    bootstrap-servers: ${CLAIMPILOT_KAFKA:localhost:9092}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    listener:
+      ack-mode: record
+  mail:
+    host: ${CLAIMPILOT_SMTP_HOST:localhost}
+    port: ${CLAIMPILOT_SMTP_PORT:1025}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${CLAIMPILOT_ISSUER:http://localhost:8080/default}
+  servlet:
+    multipart:
+      enabled: false
+
+server:
+  port: ${CLAIMPILOT_PORT:8080}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    distribution:
+      percentiles:
+        claimpilot.policy.read: 0.5,0.95,0.99
+        claimpilot.claims.cycle: 0.5,0.95
+
+claimpilot:
+  security:
+    party-hmac-key: ${CLAIMPILOT_PARTY_HMAC_KEY:}
+    bootstrap-managers: ${CLAIMPILOT_BOOTSTRAP_MANAGERS:}
+  storage:
+    endpoint: ${CLAIMPILOT_S3_ENDPOINT:http://localhost:9000}
+    public-endpoint: ${CLAIMPILOT_S3_PUBLIC_ENDPOINT:${CLAIMPILOT_S3_ENDPOINT:http://localhost:9000}}
+    region: ${CLAIMPILOT_S3_REGION:us-east-1}
+    bucket: ${CLAIMPILOT_S3_BUCKET:claimpilot}
+    access-key: ${CLAIMPILOT_S3_ACCESS_KEY:}
+    secret-key: ${CLAIMPILOT_S3_SECRET_KEY:}
+    presign-ttl: ${CLAIMPILOT_PRESIGN_TTL:PT5M}
+    max-document-bytes: ${CLAIMPILOT_MAX_DOC_BYTES:10485760}
+  mail:
+    from: ${CLAIMPILOT_MAIL_FROM:claims@claimpilot.example.test}
+  quotes:
+    per-minute: ${CLAIMPILOT_QUOTES_PER_MINUTE:30}
+    burst: ${CLAIMPILOT_QUOTES_BURST:10}
+    validity: ${CLAIMPILOT_QUOTE_VALIDITY:P15D}
+  renewals:
+    grid-size: ${CLAIMPILOT_RENEWAL_GRID:4}
+    chunk-size: ${CLAIMPILOT_RENEWAL_CHUNK:50}
+    grace-days: ${CLAIMPILOT_GRACE_DAYS:15}
+    reminder-days-before: ${CLAIMPILOT_REMINDER_DAYS:30}
+  fraud:
+    rebuild-interval: ${CLAIMPILOT_FRAUD_REBUILD:PT10M}
+  jobs:
+    enabled: ${CLAIMPILOT_JOBS_ENABLED:true}
