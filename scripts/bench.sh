@@ -29,8 +29,6 @@ for ((i = 0; i < QUERIES; i++)); do
     | awk '{printf "%.2f\n", $1 * 1000}' >> "$OUT/lat"
 done
 echo "  p50 $(percentile "$OUT/lat" 50) ms, p95 $(percentile "$OUT/lat" 95) ms, p99 $(percentile "$OUT/lat" 99) ms"
-curl -sf "$BASE/actuator/prometheus" | grep -E '^claimpilot_policy_read_seconds\{.*quantile="0.95"' \
-  | awk '{printf "  server-side p95 (all reads since start): %.2f ms\n", $2 * 1000}' || true
 
 echo "renewal run..."
 # Policies bound today end in 365 days. Each business date runs once, so on a reused stack try later dates
@@ -44,5 +42,5 @@ renewed=$(jq -r .renewed <<< "$r")
 ms=$(jq -r .durationMs <<< "$r")
 echo "  date $date: $(jq -c '{status, renewed, paymentDue, lapsed, reminders, durationMs}' <<< "$r")"
 if (( ms > 0 )); then
-  echo "  throughput: $(( renewed * 60000 / ms )) renewals/min (grid 4, chunk 50, fake gateway, one app instance)"
+  echo "  $renewed renewals in $ms ms, about $(( renewed * 1000 / ms ))/s (one small run; grid 4, chunk 50, fake gateway)"
 fi
