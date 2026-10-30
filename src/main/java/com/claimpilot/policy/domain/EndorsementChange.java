@@ -3,6 +3,7 @@ package com.claimpilot.policy.domain;
 import com.claimpilot.product.domain.rating.RatingInput;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -21,10 +22,12 @@ public record EndorsementChange(
         boolean cancel) {
 
     public EndorsementChange {
-        addRiders = addRiders == null ? Set.of() : Set.copyOf(addRiders);
-        removeRiders = removeRiders == null ? Set.of() : Set.copyOf(removeRiders);
-        numeric = numeric == null ? Map.of() : Map.copyOf(numeric);
-        categorical = categorical == null ? Map.of() : Map.copyOf(categorical);
+        // sorted, so the same change always serialises the same way (idempotency hashes depend on it)
+        addRiders = sorted(addRiders);
+        removeRiders = sorted(removeRiders);
+        numeric = numeric == null ? Collections.emptySortedMap() : Collections.unmodifiableSortedMap(new TreeMap<>(numeric));
+        categorical = categorical == null ? Collections.emptySortedMap()
+                : Collections.unmodifiableSortedMap(new TreeMap<>(categorical));
         boolean changesCover = sumInsuredMinor != null || !addRiders.isEmpty() || !removeRiders.isEmpty()
                 || !numeric.isEmpty() || !categorical.isEmpty();
         if (cancel == changesCover) {
@@ -37,6 +40,10 @@ public record EndorsementChange(
         if (addRiders.stream().anyMatch(removeRiders::contains)) {
             throw new PolicyRuleException("invalid-endorsement", "a rider can't be both added and removed");
         }
+    }
+
+    private static Set<String> sorted(Set<String> in) {
+        return in == null ? Collections.emptySortedSet() : Collections.unmodifiableSortedSet(new TreeSet<>(in));
     }
 
     public static EndorsementChange cancellation() {

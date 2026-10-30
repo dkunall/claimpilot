@@ -4,6 +4,7 @@ import com.claimpilot.shared.error.ApiException;
 import com.claimpilot.shared.security.Caller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -31,7 +32,8 @@ public class IdempotencyService {
 
     public IdempotencyService(IdempotencyStore store, ObjectMapper json, Clock clock) {
         this.store = store;
-        this.json = json;
+        // map keys sorted so a request hashes the same on every JVM
+        this.json = json.copy().configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
         this.clock = clock;
     }
 
